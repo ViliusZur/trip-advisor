@@ -4,7 +4,7 @@ import type { Country } from './countries';
  * Calculate the great-circle distance between two points on Earth using the Haversine formula.
  */
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
+  const R = 6371; // Earth's radius in kilometers
   const toRad = (deg: number) => (deg * Math.PI) / 180;
 
   const dLat = toRad(lat2 - lat1);
@@ -38,7 +38,7 @@ export function easeOfTravel(origin: Country, destination: Country): number {
     visaScore = 100;
   } else {
     const passportFactor = origin.passportStrength / 100;
-    const safetyFactor = destination.numbeoSafetyIndex / 100;
+    const safetyFactor = destination.safetyIndex / 100;
     visaScore = ((passportFactor + safetyFactor) / 2) * 100;
   }
 
@@ -46,27 +46,31 @@ export function easeOfTravel(origin: Country, destination: Country): number {
   const distance = haversineDistance(origin.lat, origin.lng, destination.lat, destination.lng);
   const distanceScore = Math.max(0, 100 * (1 - distance / 20000));
 
-  // Safety score from Numbeo (30% weight)
-  const safetyScore = destination.numbeoSafetyIndex;
+  // Safety score (30% weight)
+  const safetyScore = destination.safetyIndex;
 
   const totalScore = visaScore * 0.4 + distanceScore * 0.3 + safetyScore * 0.3;
   return clamp(totalScore, 0, 100);
 }
 
 /**
- * Price of travel: flight distance + Numbeo cost of living index.
- * Lower cost = higher score (100 = cheapest).
+  * Calculates price of travel score based on distance and cost of living.
+  * Lower cost = higher score (100 = cheapest)
+  * @returns Score from 0-100 (100 = cheapest)
  */
 export function priceOfTravel(origin: Country, destination: Country): number {
-  // Flight cost from distance (40%)
+  // Flight cost score based on distance (50% weight)
   const distance = haversineDistance(origin.lat, origin.lng, destination.lat, destination.lng);
-  const flightCostScore = Math.max(0, 100 * (1 - distance / 20000));
+  // Map distance to cost: 0km = cheapest (100), 20000km = most expensive (0)
+  const maxDistance = 20000;
+  const flightCostScore = Math.max(0, 100 * (1 - distance / maxDistance));
 
-  // Numbeo cost of living - inverted and normalized (max index ~140) (60%)
-  const colNormalized = clamp(destination.numbeoColIndex / 140, 0, 1);
-  const costOfLivingScore = (1 - colNormalized) * 100;
+  // Cost of living score (50% weight)
+  // Lower costOfLivingIndex = cheaper = higher score
+  const costOfLivingScore = 100 - destination.costOfLivingIndex;
 
-  const totalScore = flightCostScore * 0.4 + costOfLivingScore * 0.6;
+  // Weighted combination
+  const totalScore = flightCostScore * 0.5 + costOfLivingScore * 0.5;
   return clamp(totalScore, 0, 100);
 }
 
@@ -85,28 +89,23 @@ export function culturalSimilarity(origin: Country, destination: Country): numbe
 }
 
 /**
- * Economic similarity: GDP per capita ratio + Numbeo cost of living ratio.
- */
+* Calculates economic similarity based on GDP per capita and cost of living.
+* @returns Score from 0-100 (100 = most similar)
+*/
 export function economicSimilarity(origin: Country, destination: Country): number {
-  // GDP ratio (40%)
-  const gdpRatio = Math.min(origin.gdpPerCapita, destination.gdpPerCapita) /
-                   Math.max(origin.gdpPerCapita, destination.gdpPerCapita);
-  const gdpScore = gdpRatio * 100;
+        // GDP per capita ratio (60% weight)
+        const gdpRatio = Math.min(origin.gdpPerCapita, destination.gdpPerCapita) / Math.max(origin.gdpPerCapita, destination.gdpPerCapita);
+        const gdpScore = gdpRatio * 100;
 
-  // Numbeo cost of living ratio (30%)
-  const colMin = Math.max(origin.numbeoColIndex, 1);
-  const colMax = Math.max(destination.numbeoColIndex, 1);
-  const colRatio = Math.min(colMin, colMax) / Math.max(colMin, colMax);
-  const colScore = colRatio * 100;
+        // Cost of living ratio (40% weight)
+        const colRatio = Math.min(origin.costOfLivingIndex, destination.costOfLivingIndex) / Math.max(origin.costOfLivingIndex, destination.costOfLivingIndex);
 
-  // Numbeo quality of life ratio (30%)
-  const qolMin = Math.max(origin.numbeoQolIndex, 1);
-  const qolMax = Math.max(destination.numbeoQolIndex, 1);
-  const qolRatio = Math.min(qolMin, qolMax) / Math.max(qolMin, qolMax);
-  const qolScore = qolRatio * 100;
+        const colScore = colRatio * 100;
 
-  const totalScore = gdpScore * 0.4 + colScore * 0.3 + qolScore * 0.3;
-  return clamp(totalScore, 0, 100);
+        // Weighted combination
+        const totalScore = gdpScore * 0.6 + colScore * 0.4;
+
+        return clamp(totalScore, 0, 100);
 }
 
 /**
@@ -124,40 +123,36 @@ export function weatherSimilarity(origin: Country, destination: Country): number
 }
 
 /**
- * AI recommendation: composite score balancing all factors + Numbeo health/QoL + novelty bonus.
- */
+ * AI-powered recommendation score that balances accessibility, affordability, safety, and novelty.
+ * @returns Score from 0-100 (100 = best recommendation)
+*/
 export function aiRecommendation(origin: Country, destination: Country): number {
   const ease = easeOfTravel(origin, destination);
   const price = priceOfTravel(origin, destination);
   const cultural = culturalSimilarity(origin, destination);
+  const economic = economicSimilarity(origin, destination);
   const weather = weatherSimilarity(origin, destination);
-  const safety = destination.numbeoSafetyIndex;
+  const safety = destination.safetyIndex;
 
-  // Numbeo quality of life normalized to 0-100 (max ~215)
-  const qolScore = clamp((destination.numbeoQolIndex / 215) * 100, 0, 100);
-  // Numbeo health care normalized to 0-100
-  const healthScore = clamp(destination.numbeoHealthIndex, 0, 100);
-
-  // Contrast bonus: reward destinations that are different enough to be interesting
+  // Contrast bonus: reward destinations with cultural similarity between 20-60
   let contrastBonus = 0;
-  if (cultural >= 15 && cultural <= 60) {
-    const distanceFrom35 = Math.abs(cultural - 35);
-    contrastBonus = 100 * (1 - distanceFrom35 / 25);
+  if (cultural >= 20 && cultural <= 60) {
+    // Peak bonus at cultural similarity of 40
+    const distanceFrom40 = Math.abs(cultural - 40);
+    contrastBonus = 100 * (1 - distanceFrom40 / 20);
   }
 
+  // Weighted combination
   const totalScore =
-    ease * 0.15 +
-    price * 0.10 +
-    cultural * 0.05 +
-    weather * 0.05 +
+    ease * 0.20 +
+    price * 0.15 +
+    cultural * 0.10 +
+    economic * 0.05 +
+    weather * 0.10 +
     safety * 0.15 +
-    qolScore * 0.15 +
-    healthScore * 0.10 +
     contrastBonus * 0.25;
-
   return clamp(totalScore, 0, 100);
 }
-
 export type MetricType =
   | 'easeOfTravel'
   | 'priceOfTravel'

@@ -126,25 +126,25 @@ export default function CountryDetailPanel({
             <div className="flex justify-between">
               <span>Safety Index</span>
               <span className="text-slate-300">
-                {destination.numbeoSafetyIndex.toFixed(1)}
+                {destination.numbeoSafetyIndex?.toFixed(1)}
               </span>
             </div>
             <div className="flex justify-between">
               <span>Cost of Living</span>
               <span className="text-slate-300">
-                {destination.numbeoColIndex.toFixed(1)}
+                {destination.numbeoColIndex?.toFixed(1)}
               </span>
             </div>
             <div className="flex justify-between">
               <span>Quality of Life</span>
               <span className="text-slate-300">
-                {destination.numbeoQolIndex.toFixed(1)}
+                {destination.numbeoQolIndex?.toFixed(1)}
               </span>
             </div>
             <div className="flex justify-between">
               <span>Health Care</span>
               <span className="text-slate-300">
-                {destination.numbeoHealthIndex.toFixed(1)}
+                {destination.numbeoHealthIndex?.toFixed(1)}
               </span>
             </div>
           </div>
@@ -160,8 +160,7 @@ export default function CountryDetailPanel({
             </div>
             <div className="flex justify-between">
               <span>Language</span>
-              <span className="text-slate-300">{destination.languageFamily}</span>
-            </div>
+              <span className="text-slate-300">{destination.languageFamily}</span> </div>
             <div className="flex justify-between">
               <span>Religion</span>
               <span className="text-slate-300">{destination.majorReligion}</span>

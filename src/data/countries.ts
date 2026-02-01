@@ -14,10 +14,10 @@ export type Country = {
   avgTemperature: number;
   passportStrength: number;
   visaGroup: string;
-  numbeoSafetyIndex: number;      // from Numbeo's Safety Index (0-100)
-  numbeoColIndex: number;          // from Numbeo's Cost of Living Index (0-140 scale)
-  numbeoQolIndex: number;          // from Numbeo's Quality of Life Index (0-220 scale)
-  numbeoHealthIndex: number;       // from Numbeo's Health Care Index (0-100)
+  numbeoSafetyIndex?: number;      // from Numbeo's Safety Index (0-100)
+  numbeoColIndex?: number;          // from Numbeo's Cost of Living Index (0-140 scale)
+  numbeoQolIndex?: number;          // from Numbeo's Quality of Life Index (0-220 scale)
+  numbeoHealthIndex?: number;       // from Numbeo's Health Care Index (0-100)
 };
 
 export const countries: Country[] = [
