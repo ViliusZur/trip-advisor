@@ -2900,7 +2900,7 @@ export const countries: Country[] = [
     majorReligion: "Christianity",
     gdpPerCapita: 12000,
     costOfLivingIndex: 42,
-    safetyIndex: 65,
+    safetyIndex: 0,
     climateZone: "Continental",
     avgTemperature: 5,
     passportStrength: 60,
